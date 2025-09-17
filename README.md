@@ -9,6 +9,7 @@ GitHub notifications are overwhelming. You get spammed with every comment, issue
 ## Solution
 
 Ping filters notifications to show only what matters:
+
 - Pull requests
 - Direct mentions (`@username`)
 - Team mentions
@@ -20,35 +21,40 @@ Uses GitHub's `participating=true` filter to eliminate 80% of noise upfront.
 ## Install
 
 **Linux/macOS:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ai-mindset/ping/main/install.sh | bash
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 iwr https://raw.githubusercontent.com/ai-mindset/ping/main/install.ps1 | iex
 ```
 
 ## Setup
 
-1. Create GitHub Personal Access Token:
+1. Create GitHub Personal Access Token (classic):
    - Go to [GitHub Settings → Tokens](https://github.com/settings/tokens)
-   - Generate fine-grained token with "Notifications" read permission
+   - Generate a classic token with "Notifications" read permission (fine-grained tokens don't support the notifications API)
 
 2. Create `.env` file:
    ```bash
-   echo "GITHUB_TOKEN=ghp_your_token_here" > .env
+   [[ ! -d ~/.config/ping ]] && mkdir -p ~/.config/ping
+   echo "GITHUB_TOKEN=ghp_your_token_here" > ~/.config/ping/.env
    chmod 600 .env  # Secure the file
    ```
 
 ## Usage
 
 **Check notifications:**
+
 ```bash
 ping
 ```
 
 **Sample output:**
+
 ```
 3 important notification(s):
 
@@ -60,6 +66,7 @@ ping
 ```
 
 **Automate with cron (optional):**
+
 ```bash
 # Check every 15 minutes
 */15 * * * * cd /path/to/project && /path/to/ping
@@ -79,11 +86,13 @@ ping
 **Requirements:** Deno 2.0+
 
 **Run from source:**
+
 ```bash
 deno run --allow-env --allow-net --allow-read ping.ts
 ```
 
 **Build binaries:**
+
 ```bash
 deno run --allow-run --allow-write build.ts
 ```
