@@ -42,7 +42,7 @@ iwr https://raw.githubusercontent.com/ai-mindset/ping/main/install.ps1 | iex
    ```bash
    [[ ! -d ~/.config/ping ]] && mkdir -p ~/.config/ping
    echo "GITHUB_TOKEN=ghp_your_token_here" > ~/.config/ping/.env
-   chmod 600 .env  # Secure the file
+   chmod 600 ~/.config/ping/.env  # Secure the file
    ```
 
 ## Usage
