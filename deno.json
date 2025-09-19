@@ -1,13 +1,12 @@
 {
 	"tasks": {
-		"dev": "deno run --allow-env --allow-net --allow-read ping.ts",
-		"dev:org": "deno run --allow-env --allow-net --allow-read ping.ts The-Strategy-Unit",
+		"dev": "deno run --allow-env --allow-net --allow-read --allow-run ping.ts --debug --notifications=12",
 		"build": "deno task build:all",
 		"build:all": "mkdir -p dist && deno task build:linux && deno task build:mac && deno task build:mac-arm && deno task build:windows",
-		"build:linux": "deno compile --allow-env --allow-net --allow-read --target x86_64-unknown-linux-gnu --output dist/ping-linux-x86_64 ping.ts",
-		"build:mac": "deno compile --allow-env --allow-net --allow-read --target x86_64-apple-darwin --output dist/ping-darwin-x86_64 ping.ts",
-		"build:mac-arm": "deno compile --allow-env --allow-net --allow-read --target aarch64-apple-darwin --output dist/ping-darwin-aarch64 ping.ts",
-		"build:windows": "deno compile --allow-env --allow-net --allow-read --target x86_64-pc-windows-msvc --output dist/ping-windows-x86_64.exe ping.ts",
+		"build:linux": "deno compile --allow-env --allow-net --allow-read  --allow-run --target x86_64-unknown-linux-gnu --output dist/ping-linux-x86_64 ping.ts",
+		"build:mac": "deno compile --allow-env --allow-net --allow-read --allow-run --target x86_64-apple-darwin --output dist/ping-darwin-x86_64 ping.ts",
+		"build:mac-arm": "deno compile --allow-env --allow-net --allow-read --allow-run --target aarch64-apple-darwin --output dist/ping-darwin-aarch64 ping.ts",
+		"build:windows": "deno compile --allow-env --allow-net --allow-read --allow-run --target x86_64-pc-windows-msvc --output dist/ping-windows-x86_64.exe ping.ts",
 		"fmt": "deno fmt",
 		"lint": "deno lint",
 		"check": "deno fmt --check && deno lint"
