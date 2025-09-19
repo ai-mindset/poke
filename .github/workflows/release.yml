@@ -4,6 +4,9 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write # This allows creating releases
+
 jobs:
   build:
     runs-on: ubuntu-latest
