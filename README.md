@@ -1,4 +1,4 @@
-# Ping
+# Pingh
 
 A minimal CLI tool for GitHub that intelligently filters through notification noise, showing you exactly what needs your attention: PRs for review, assigned issues, and @ mentions.
 
@@ -20,13 +20,13 @@ Ping filters GitHub items to show exactly what matters:
 **Linux/macOS:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ai-mindset/ping/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ai-mindset/pingh/main/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-iwr https://raw.githubusercontent.com/ai-mindset/ping/main/install.ps1 | iex
+iwr https://raw.githubusercontent.com/ai-mindset/pingh/main/install.ps1 | iex
 ```
 
 ## Setup
@@ -40,10 +40,10 @@ iwr https://raw.githubusercontent.com/ai-mindset/ping/main/install.ps1 | iex
 2. Edit the config file created by the installer:
    ```bash
    # Linux/macOS
-   nano ~/.config/ping/.env
+   nano ~/.config/pingh/.env
 
    # Windows
-   notepad %USERPROFILE%\AppData\Local\ping\.env
+   notepad %USERPROFILE%\AppData\Local\pingh\.env
    ```
 
 3. Add your GitHub details to the config:
@@ -59,19 +59,19 @@ iwr https://raw.githubusercontent.com/ai-mindset/ping/main/install.ps1 | iex
 **Check notifications:**
 
 ```bash
-ping
+pingh
 ```
 
 **Filter for a specific organization:**
 
 ```bash
-ping my-organization
+pingh my-organization
 ```
 
 **Control how many notifications to display:**
 
 ```bash
-ping --notifications=15
+pingh --notifications=15
 ```
 
 **Sample output:**
@@ -101,7 +101,7 @@ ping --notifications=15
 
 ```bash
 # Check every 15 minutes
-*/15 * * * * ~/.local/bin/ping
+*/15 * * * * ~/.local/bin/pingh
 ```
 
 ## How It Works
@@ -129,7 +129,7 @@ ping --notifications=15
 **Run from source:**
 
 ```bash
-deno run --allow-env --allow-net --allow-read --allow-run ping.ts
+deno run --allow-env --allow-net --allow-read --allow-run pingh.ts
 ```
 
 **Build binaries:**
