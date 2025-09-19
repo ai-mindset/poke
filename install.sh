@@ -12,23 +12,33 @@ case $ARCH in
 esac
 
 case $OS in
-  linux) EXT="" ;;
-  darwin) EXT="" ;;
+  linux) OS="linux" ;;
+  darwin) OS="darwin" ;;
   *) echo "Unsupported OS: $OS"; exit 1 ;;
 esac
 
-BINARY_NAME="ping-${OS}-${ARCH}${EXT}"
+BINARY_NAME="ping-${OS}-${ARCH}"
 INSTALL_DIR="${HOME}/.local/bin"
 CONFIG_DIR="${HOME}/.config/ping"
 LATEST_URL="https://api.github.com/repos/ai-mindset/ping/releases/latest"
 
 echo "Installing ping for ${OS}-${ARCH}..."
 
-# Get latest release info
-DOWNLOAD_URL=$(curl -s "$LATEST_URL" | grep -o "https://.*/${BINARY_NAME}" | head -1)
+# Get latest release info using a better JSON parsing approach
+if command -v jq >/dev/null 2>&1; then
+  # Use jq if available
+  RELEASE_DATA=$(curl -s "$LATEST_URL")
+  DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r ".assets[] | select(.name == \"$BINARY_NAME\") | .browser_download_url")
+else
+  # Fallback method if jq is not available
+  RELEASE_DATA=$(curl -s "$LATEST_URL")
+  DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep -o "\"browser_download_url\":\"[^\"]*${BINARY_NAME}[^\"]*\"" | head -1 | sed 's/"browser_download_url":"//g' | sed 's/"//g')
+fi
 
 if [ -z "$DOWNLOAD_URL" ]; then
   echo "Error: Could not find binary for ${OS}-${ARCH}"
+  echo "Available assets:"
+  curl -s "$LATEST_URL" | grep -o "\"name\":\"[^\"]*\"" | sed 's/"name":"//g' | sed 's/"//g'
   exit 1
 fi
 

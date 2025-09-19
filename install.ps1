@@ -14,6 +14,7 @@ $downloadUrl = $releaseInfo.assets | Where-Object { $_.name -eq $BINARY_NAME } |
 
 if (-not $downloadUrl) {
     Write-Error "Could not find binary for windows-$ARCH"
+    exit 1
 }
 
 # Create install directory
@@ -31,11 +32,13 @@ Write-Host "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvi
 Write-Host ""
 Write-Host "Create config file with your GitHub settings:"
 Write-Host "New-Item -ItemType Directory -Force -Path '$CONFIG_DIR' | Out-Null"
-Write-Host @"
-Set-Content -Path "$CONFIG_DIR\.env" -Value @"
+
+# Fixed here-string syntax
+$configContent = @"
 GITHUB_TOKEN=ghp_your_token
 GITHUB_USERNAME=your_username
 WORK_ORGS=Your-Organization
 WORK_TEAMS=team1,team2,team3
 "@
-"@
+
+Write-Host "Set-Content -Path '$CONFIG_DIR\.env' -Value '$configContent'"
