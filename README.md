@@ -1,6 +1,6 @@
 # Ping
 
-A minimal CLI tool to filter GitHub notification noise, showing only PRs and @ mentions that need your attention.
+A minimal CLI tool for GitHub that intelligently filters through notification noise, showing you exactly what needs your attention: PRs for review, assigned issues, and @ mentions.
 
 ## Problem
 
@@ -8,15 +8,12 @@ GitHub notifications are overwhelming. You get spammed with every comment, issue
 
 ## Solution
 
-Ping filters notifications to show only what matters:
+Ping filters GitHub items to show exactly what matters:
 
-- Pull requests
-- Direct mentions (`@username`)
-- Team mentions
-- Review requests
-- Assignments
-
-Uses GitHub's `participating=true` filter to eliminate 80% of noise upfront.
+- Pull requests awaiting your personal or team review
+- Issues assigned to you (open and recently closed)
+- PRs you've recently reviewed
+- Direct mentions (`@username`) and team mentions
 
 ## Install
 
@@ -36,13 +33,25 @@ iwr https://raw.githubusercontent.com/ai-mindset/ping/main/install.ps1 | iex
 
 1. Create GitHub Personal Access Token (classic):
    - Go to [GitHub Settings → Tokens](https://github.com/settings/tokens)
-   - Generate a classic token with "Notifications" read permission (fine-grained tokens don't support the notifications API)
+   - Generate a classic token with the following scopes:
+     - `repo` (required for searching private repositories)
+     - `notifications` (required for notification access)
 
-2. Create `.env` file:
+2. Edit the config file created by the installer:
    ```bash
-   [[ ! -d ~/.config/ping ]] && mkdir -p ~/.config/ping
-   echo "GITHUB_TOKEN=ghp_your_token_here" > ~/.config/ping/.env
-   chmod 600 ~/.config/ping/.env  # Secure the file
+   # Linux/macOS
+   nano ~/.config/ping/.env
+
+   # Windows
+   notepad %USERPROFILE%\AppData\Local\ping\.env
+   ```
+
+3. Add your GitHub details to the config:
+   ```
+   GITHUB_TOKEN=ghp_your_token_here
+   GITHUB_USERNAME=your_username
+   WORK_ORGS=Your-Organization
+   WORK_TEAMS=team1,team2,team3
    ```
 
 ## Usage
@@ -53,31 +62,63 @@ iwr https://raw.githubusercontent.com/ai-mindset/ping/main/install.ps1 | iex
 ping
 ```
 
+**Filter for a specific organization:**
+
+```bash
+ping my-organization
+```
+
+**Control how many notifications to display:**
+
+```bash
+ping --notifications=15
+```
+
 **Sample output:**
 
 ```
-3 important notification(s):
+🔥 3 Pull Requests need your review:
 
-🔄 [owner/repo] Fix authentication bug
-   review_requested • https://github.com/owner/repo/pull/123
+✅ [org/repo] Add new authentication feature
+   your review requested • https://github.com/org/repo/pull/123
 
-💬 [team/project] Discussion about feature X
-   mention • https://github.com/team/project/issues/456
+✅ [org/repo] Fix bug in API response
+   team review requested • https://github.com/org/repo/pull/456
+
+🔄 [org/repo] Update documentation
+   review_requested • https://github.com/org/repo/pull/789
+
+📋 2 Issues assigned to you:
+
+📝 [org/repo] Implement search feature
+   #42 • todo • https://github.com/org/repo/issues/42
+
+📝 [org/repo] Fix performance issue in dashboard
+   #43 • todo • https://github.com/org/repo/issues/43
 ```
 
 **Automate with cron (optional):**
 
 ```bash
 # Check every 15 minutes
-*/15 * * * * cd /path/to/project && /path/to/ping
+*/15 * * * * ~/.local/bin/ping
 ```
 
 ## How It Works
 
-1. Fetches GitHub notifications with `participating=true` (you're directly involved)
-2. Filters for PRs and priority reasons (mentions, reviews, assignments)
-3. Displays unread notifications only
-4. Converts API URLs to web URLs for easy clicking
+1. Uses the GitHub Search API to find:
+   - PRs waiting for your review (personal or team)
+   - Open issues assigned to you
+   - Recently closed issues you were assigned to
+   - PRs you've recently reviewed
+
+2. Prioritizes items by importance:
+   - Work organization items are boosted to the top
+   - PRs needing review come first
+   - Then open issues assigned to you
+   - Followed by recently completed work
+
+3. Sends desktop notifications with the most important items
 
 **Result:** Signal without noise. See what needs your attention, ignore the rest.
 
@@ -88,13 +129,13 @@ ping
 **Run from source:**
 
 ```bash
-deno run --allow-env --allow-net --allow-read ping.ts
+deno run --allow-env --allow-net --allow-read --allow-run ping.ts
 ```
 
 **Build binaries:**
 
 ```bash
-deno run --allow-run --allow-write build.ts
+deno task build
 ```
 
 ## License
