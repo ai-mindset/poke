@@ -20,7 +20,7 @@ let GITHUB_USERNAME = "";
 
 // Load environment variables
 if (!GITHUB_TOKEN) {
-  const projectName = "ping";
+  const projectName = "poke";
   const homeDir = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
   const configPath = `${homeDir}/.config/${projectName}/.env`;
 
@@ -55,7 +55,7 @@ if (!GITHUB_TOKEN) {
 
 if (!GITHUB_TOKEN) {
   console.error(
-    "GitHub token required. Create ~/.config/ping/.env with GITHUB_TOKEN=your_token",
+    "GitHub token required. Create ~/.config/poke/.env with GITHUB_TOKEN=your_token",
   );
   Deno.exit(1);
 }

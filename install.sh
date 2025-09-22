@@ -17,12 +17,12 @@ case $OS in
   *) echo "Unsupported OS: $OS"; exit 1 ;;
 esac
 
-BINARY_NAME="ping-${OS}-${ARCH}${EXT}"
+BINARY_NAME="poke-${OS}-${ARCH}${EXT}"
 INSTALL_DIR="${HOME}/.local/bin"
-CONFIG_DIR="${HOME}/.config/ping"
-LATEST_URL="https://api.github.com/repos/ai-mindset/ping/releases/latest"
+CONFIG_DIR="${HOME}/.config/poke"
+LATEST_URL="https://api.github.com/repos/ai-mindset/poke/releases/latest"
 
-echo "Installing ping for ${OS}-${ARCH}..."
+echo "Installing poke for ${OS}-${ARCH}..."
 
 # Get latest release info
 DOWNLOAD_URL=$(curl -s "$LATEST_URL" | grep -o "https://.*/${BINARY_NAME}" | head -1)
@@ -38,10 +38,10 @@ mkdir -p "$CONFIG_DIR"
 
 # Download and install
 echo "Downloading from: $DOWNLOAD_URL"
-curl -L "$DOWNLOAD_URL" -o "${INSTALL_DIR}/ping"
-chmod +x "${INSTALL_DIR}/ping"
+curl -L "$DOWNLOAD_URL" -o "${INSTALL_DIR}/poke"
+chmod +x "${INSTALL_DIR}/poke"
 
-echo "✅ ping installed to ${INSTALL_DIR}/ping"
+echo "✅ poke installed to ${INSTALL_DIR}/poke"
 echo ""
 echo "Add to PATH if needed:"
 echo "export PATH=\"\$HOME/.local/bin:\$PATH\""

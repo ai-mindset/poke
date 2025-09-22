@@ -1,12 +1,12 @@
 $ErrorActionPreference = "Stop"
 
 $ARCH = if ([Environment]::Is64BitProcess) { "x86_64" } else { "x86" }
-$BINARY_NAME = "ping-windows-${ARCH}.exe"
+$BINARY_NAME = "poke-windows-${ARCH}.exe"
 $INSTALL_DIR = "$env:USERPROFILE\.local\bin"
-$CONFIG_DIR = "$env:USERPROFILE\AppData\Local\ping"
-$LATEST_URL = "https://api.github.com/repos/ai-mindset/ping/releases/latest"
+$CONFIG_DIR = "$env:USERPROFILE\AppData\Local\poke"
+$LATEST_URL = "https://api.github.com/repos/ai-mindset/poke/releases/latest"
 
-Write-Host "Installing ping for windows-$ARCH..."
+Write-Host "Installing poke for windows-$ARCH..."
 
 # Get latest release info
 $releaseInfo = Invoke-RestMethod -Uri $LATEST_URL
@@ -22,9 +22,9 @@ New-Item -ItemType Directory -Force -Path $CONFIG_DIR | Out-Null
 
 # Download and install
 Write-Host "Downloading from: $downloadUrl"
-Invoke-WebRequest -Uri $downloadUrl -OutFile "$INSTALL_DIR\ping.exe"
+Invoke-WebRequest -Uri $downloadUrl -OutFile "$INSTALL_DIR\poke.exe"
 
-Write-Host "✅ ping installed to $INSTALL_DIR\ping.exe"
+Write-Host "✅ poke installed to $INSTALL_DIR\poke.exe"
 Write-Host ""
 Write-Host "Add to PATH if needed (run as Administrator):"
 Write-Host "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';$INSTALL_DIR', 'User')"
