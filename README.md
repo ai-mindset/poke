@@ -1,4 +1,4 @@
-# Poke 👇
+# Poke 👉
 
 A minimal CLI tool for GitHub that intelligently filters through notification noise, showing you exactly what needs your attention: PRs for review, assigned issues, and @ mentions.
 
