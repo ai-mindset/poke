@@ -49,7 +49,6 @@ iwr https://raw.githubusercontent.com/ai-mindset/poke/main/install.ps1 | iex
 3. Add your GitHub details to the config:
    ```
    GITHUB_TOKEN=ghp_your_token_here
-   GITHUB_USERNAME=your_username
    WORK_ORGS=Your-Organization
    WORK_TEAMS=team1,team2,team3
    ```
