@@ -105,6 +105,7 @@ async function fetchAllViews(org?: string): Promise<{
   done: GitHubIssue[];
   toReview: GitHubIssue[];
   reviewed: GitHubIssue[];
+  mentioned: GitHubIssue[];
 }> {
   // Get organization name
   const orgName = org || (WORK_ORGS.length > 0 ? WORK_ORGS[0] : "");
@@ -122,13 +123,15 @@ async function fetchAllViews(org?: string): Promise<{
   // Separate queries to avoid syntax issues
   const personalReviewQuery = `is:pr review-requested:@me org:${orgName}`;
   const prReviewedQuery = `is:pr reviewed-by:@me org:${orgName}`;
+  const prMentionsQuery = `is:pr is:open mentions:@me org:${orgName}`;
 
   // Fetch issues and personal review PRs first
-  const [todo, done, personalReviews, reviewed] = await Promise.all([
+  const [todo, done, personalReviews, reviewed, mentioned] = await Promise.all([
     searchGitHub(todoQuery),
     searchGitHub(doneQuery),
     searchGitHub(personalReviewQuery),
     searchGitHub(prReviewedQuery),
+    searchGitHub(prMentionsQuery),
   ]);
 
   // Now fetch team review PRs separately for each team
@@ -174,6 +177,7 @@ async function fetchAllViews(org?: string): Promise<{
     done,
     toReview: allReviews,
     reviewed,
+    mentioned,
   };
 }
 
@@ -283,6 +287,14 @@ if (import.meta.main) {
         views.reviewed.slice(0, 5).forEach((item) =>
           displayItem(item, "reviewed")
         );
+      }
+
+      // Display PRs where the user is mentioned
+      if (views.mentioned.length > 0) {
+        console.log(
+          `\n💬 ${views.mentioned.length} Pull Requests where you're mentioned:\n`,
+        );
+        views.mentioned.forEach((item) => displayItem(item, "mentioned"));
       }
 
       // Prepare desktop notification focusing on highest priority items
