@@ -490,7 +490,12 @@ Examples:
 
     // Get status if provided
     const statusArg = Deno.args.find((arg) => arg.startsWith("--status="));
-    const status = statusArg ? statusArg.split("=")[1] : null;
+    const rawStatus = statusArg ? statusArg.split("=")[1] : null;
+
+    // Validate status to match allowed types
+    const status = rawStatus && ["backlog", "in-progress", "blocked", "review"].includes(rawStatus)
+      ? rawStatus as "backlog" | "in-progress" | "blocked" | "review"
+      : null;
 
     // Get note if provided (handle complex notes with = characters)
     const noteArg = Deno.args.find((arg) => arg.startsWith("--note="));
