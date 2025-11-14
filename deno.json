@@ -1,28 +1,29 @@
 {
-	"tasks": {
-		"dev": "deno run --allow-env --allow-net --allow-read --allow-run poke.ts --debug --notifications=12",
-		"build": "deno task build:all",
-		"build:all": "mkdir -p dist && deno task build:linux && deno task build:mac && deno task build:mac-arm && deno task build:windows",
-		"build:linux": "deno compile --allow-env --allow-net --allow-read  --allow-run --target x86_64-unknown-linux-gnu --output dist/poke-linux-x86_64 poke.ts",
-		"build:mac": "deno compile --allow-env --allow-net --allow-read --allow-run --target x86_64-apple-darwin --output dist/poke-darwin-x86_64 poke.ts",
-		"build:mac-arm": "deno compile --allow-env --allow-net --allow-read --allow-run --target aarch64-apple-darwin --output dist/poke-darwin-aarch64 poke.ts",
-		"build:windows": "deno compile --allow-env --allow-net --allow-read --allow-run --target x86_64-pc-windows-msvc --output dist/poke-windows-x86_64.exe poke.ts",
-		"fmt": "deno fmt",
-		"lint": "deno lint",
-		"check": "deno fmt --check && deno lint"
-	},
-	"fmt": {
-		"useTabs": false,
-		"indentWidth": 2,
-		"singleQuote": false,
-		"proseWrap": "preserve"
-	},
-	"lint": {
-		"rules": {
-			"tags": ["recommended"]
-		}
-	},
-	"compilerOptions": {
-		"strict": true
-	}
+    "tasks": {
+        "dev": "deno run --allow-env --allow-net --allow-read --allow-run poke.ts --debug --notifications=8",
+        "todo": "deno run --allow-env --allow-net --allow-read --allow-run poke.ts --todo",
+        "build": "deno task build:all",
+        "build:all": "mkdir -p dist && deno task build:linux && deno task build:mac && deno task build:mac-arm && deno task build:windows",
+        "build:linux": "deno compile --allow-env --allow-net --allow-read  --allow-run --target x86_64-unknown-linux-gnu --output dist/poke-linux-x86_64 poke.ts",
+        "build:mac": "deno compile --allow-env --allow-net --allow-read --allow-run --target x86_64-apple-darwin --output dist/poke-darwin-x86_64 poke.ts",
+        "build:mac-arm": "deno compile --allow-env --allow-net --allow-read --allow-run --target aarch64-apple-darwin --output dist/poke-darwin-aarch64 poke.ts",
+        "build:windows": "deno compile --allow-env --allow-net --allow-read --allow-run --target x86_64-pc-windows-msvc --output dist/poke-windows-x86_64.exe poke.ts",
+        "fmt": "deno fmt",
+        "lint": "deno lint",
+        "check": "deno fmt --check && deno lint"
+    },
+    "fmt": {
+        "useTabs": false,
+        "indentWidth": 2,
+        "singleQuote": false,
+        "proseWrap": "preserve"
+    },
+    "lint": {
+        "rules": {
+            "tags": ["recommended"]
+        }
+    },
+    "compilerOptions": {
+        "strict": true
+    }
 }
