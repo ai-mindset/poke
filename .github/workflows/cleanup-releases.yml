@@ -16,4 +16,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           keep-count: 2
-          delete-tags: true
+          delete-tags: false

@@ -3,25 +3,85 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
-  contents: write # This allows creating releases
+  contents: read
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: 2.9.5
 
-      - name: Build all platforms
-        run: deno task build
+      - name: Check source
+        run: deno task check
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - task: build:linux
+            asset: poke-linux-x86_64
+            smoke_test: true
+          - task: build:linux-arm
+            asset: poke-linux-aarch64
+          - task: build:mac
+            asset: poke-darwin-x86_64
+          - task: build:mac-arm
+            asset: poke-darwin-aarch64
+          - task: build:windows
+            asset: poke-windows-x86_64.exe
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.5
+
+      - name: Build ${{ matrix.asset }}
+        run: |
+          mkdir -p dist
+          deno task ${{ matrix.task }}
+
+      - name: Smoke test Linux executable
+        if: matrix.smoke_test
+        run: dist/poke-linux-x86_64 --help
+
+      - name: Upload ${{ matrix.asset }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download executables
+        uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create checksums
+        working-directory: dist
+        run: sha256sum poke-* > SHA256SUMS
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
