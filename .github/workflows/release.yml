@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing v* tag to publish (leave empty for a build-only run)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -13,6 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+
+      - name: Validate release tag
+        if: inputs.release_tag != ''
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          case "$RELEASE_TAG" in
+            v*) ;;
+            *) echo "Release tag must start with v." >&2; exit 1 ;;
+          esac
+          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
 
       - uses: denoland/setup-deno@v2
         with:
@@ -41,6 +59,8 @@ jobs:
             asset: poke-windows-x86_64.exe
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - uses: denoland/setup-deno@v2
         with:
@@ -64,7 +84,7 @@ jobs:
           compression-level: 0
 
   release:
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || inputs.release_tag != ''
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -83,5 +103,6 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
           files: dist/*
           generate_release_notes: true

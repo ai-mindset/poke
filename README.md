@@ -264,9 +264,11 @@ host.
 
 [`release.yml`](.github/workflows/release.yml) runs checks and builds each
 supported target independently with Deno 2.9.5. A manual workflow run makes the
-executables available as workflow artifacts. Pushing a `v*` tag also creates a
-GitHub release containing all five executables, generated release notes, and
-`SHA256SUMS`; the release is created only after every build succeeds.
+executables available as workflow artifacts. Supplying an existing `v*` tag in
+the manual run publishes that tag, which provides a recovery path if its push
+event was missed. Pushing a `v*` tag also creates a GitHub release containing all
+five executables, generated release notes, and `SHA256SUMS`; the release is
+created only after every build succeeds.
 
 The source is split into:
 
