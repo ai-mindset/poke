@@ -1,56 +1,103 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# Detect OS and architecture
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
+: "${HOME:?HOME must be set}"
 
-case $ARCH in
-  x86_64) ARCH="x86_64" ;;
-  arm64|aarch64) ARCH="aarch64" ;;
-  *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+for command_name in curl install mktemp; do
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "Error: Required command not found: ${command_name}" >&2
+    exit 1
+  fi
+done
+
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+architecture=$(uname -m)
+
+case "$architecture" in
+  x86_64) architecture="x86_64" ;;
+  arm64 | aarch64) architecture="aarch64" ;;
+  *)
+    echo "Error: Unsupported architecture: ${architecture}" >&2
+    exit 1
+    ;;
 esac
 
-case $OS in
-  linux) EXT="" ;;
-  darwin) EXT="" ;;
-  *) echo "Unsupported OS: $OS"; exit 1 ;;
+case "$os" in
+  linux | darwin) ;;
+  *)
+    echo "Error: Unsupported operating system: ${os}" >&2
+    exit 1
+    ;;
 esac
 
-BINARY_NAME="poke-${OS}-${ARCH}${EXT}"
-INSTALL_DIR="${HOME}/.local/bin"
-CONFIG_DIR="${HOME}/.config/poke"
-LATEST_URL="https://api.github.com/repos/ai-mindset/poke/releases/latest"
+binary_name="poke-${os}-${architecture}"
+install_dir="${HOME}/.local/bin"
+release_base_url="https://github.com/ai-mindset/poke/releases/latest/download"
+temporary_dir=$(mktemp -d)
+temporary_install_path=""
 
-echo "Installing poke for ${OS}-${ARCH}..."
+cleanup() {
+  if [[ -n "$temporary_install_path" && -f "$temporary_install_path" ]]; then
+    rm -f "$temporary_install_path"
+  fi
+  if [[ -d "$temporary_dir" ]]; then
+    rm -rf "$temporary_dir"
+  fi
+}
+trap cleanup EXIT
 
-# Get latest release info
-DOWNLOAD_URL=$(curl -s "$LATEST_URL" | grep -o "https://.*/${BINARY_NAME}" | head -1)
+binary_path="${temporary_dir}/${binary_name}"
+checksums_path="${temporary_dir}/SHA256SUMS"
+curl_options=(--fail --silent --show-error --location --proto '=https' --tlsv1.2)
 
-if [ -z "$DOWNLOAD_URL" ]; then
-  echo "Error: Could not find binary for ${OS}-${ARCH}"
+echo "Installing Poke for ${os}-${architecture}..."
+curl "${curl_options[@]}" --output "$binary_path" \
+  "${release_base_url}/${binary_name}"
+curl "${curl_options[@]}" --output "$checksums_path" \
+  "${release_base_url}/SHA256SUMS"
+
+expected_hash=$(
+  awk -v asset="$binary_name" \
+    '$2 == asset || $2 == "*" asset { print $1; exit }' \
+    "$checksums_path"
+)
+
+if ! printf '%s\n' "$expected_hash" | grep -Eq '^[0-9a-fA-F]{64}$'; then
+  echo "Error: SHA256SUMS has no valid entry for ${binary_name}" >&2
   exit 1
 fi
 
-# Create install directory
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$CONFIG_DIR"
+if command -v sha256sum >/dev/null 2>&1; then
+  actual_hash=$(sha256sum "$binary_path" | awk '{ print $1 }')
+elif command -v shasum >/dev/null 2>&1; then
+  actual_hash=$(shasum -a 256 "$binary_path" | awk '{ print $1 }')
+else
+  echo "Error: sha256sum or shasum is required to verify the download" >&2
+  exit 1
+fi
 
-# Download and install
-echo "Downloading from: $DOWNLOAD_URL"
-curl -L "$DOWNLOAD_URL" -o "${INSTALL_DIR}/poke"
-chmod +x "${INSTALL_DIR}/poke"
+expected_hash=$(printf '%s' "$expected_hash" | tr '[:upper:]' '[:lower:]')
+actual_hash=$(printf '%s' "$actual_hash" | tr '[:upper:]' '[:lower:]')
+if [[ "$actual_hash" != "$expected_hash" ]]; then
+  echo "Error: Checksum verification failed for ${binary_name}" >&2
+  exit 1
+fi
 
-echo "✅ poke installed to ${INSTALL_DIR}/poke"
-echo ""
-echo "Add to PATH if needed:"
-echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
-echo ""
-echo "Create config file with your GitHub settings:"
-echo "mkdir -p \"$CONFIG_DIR\""
-echo "cat > \"$CONFIG_DIR/.env\" << EOF
-GITHUB_TOKEN=ghp_your_token
-GITHUB_USERNAME=your_username
-WORK_ORGS=Your-Organization
-WORK_TEAMS=team1,team2,team3
-EOF"
+chmod +x "$binary_path"
+if ! "$binary_path" --help >/dev/null; then
+  echo "Error: The downloaded executable failed its smoke test" >&2
+  exit 1
+fi
+
+mkdir -p "$install_dir"
+temporary_install_path="${install_dir}/.poke-install-$$"
+install -m 0755 "$binary_path" "$temporary_install_path"
+mv -f "$temporary_install_path" "${install_dir}/poke"
+temporary_install_path=""
+
+echo "Poke installed to ${install_dir}/poke"
+if [[ ":${PATH}:" != *":${install_dir}:"* ]]; then
+  echo "Add this line to your shell profile, then start a new terminal:"
+  echo 'export PATH="$HOME/.local/bin:$PATH"'
+fi
+echo "Run 'poke --help' to get started."

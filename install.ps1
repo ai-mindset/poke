@@ -1,41 +1,87 @@
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ARCH = if ([Environment]::Is64BitProcess) { "x86_64" } else { "x86" }
-$BINARY_NAME = "poke-windows-${ARCH}.exe"
-$INSTALL_DIR = "$env:USERPROFILE\.local\bin"
-$CONFIG_DIR = "$env:USERPROFILE\AppData\Local\poke"
-$LATEST_URL = "https://api.github.com/repos/ai-mindset/poke/releases/latest"
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
-Write-Host "Installing poke for windows-$ARCH..."
-
-# Get latest release info
-$releaseInfo = Invoke-RestMethod -Uri $LATEST_URL
-$downloadUrl = $releaseInfo.assets | Where-Object { $_.name -eq $BINARY_NAME } | Select-Object -ExpandProperty browser_download_url
-
-if (-not $downloadUrl) {
-    Write-Error "Could not find binary for windows-$ARCH"
+$osArchitecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+if ($osArchitecture -ne [Runtime.InteropServices.Architecture]::X64) {
+    throw "Unsupported Windows architecture: $osArchitecture. Poke currently provides Windows x86-64 executables."
 }
 
-# Create install directory
-New-Item -ItemType Directory -Force -Path $INSTALL_DIR | Out-Null
-New-Item -ItemType Directory -Force -Path $CONFIG_DIR | Out-Null
+$binaryName = "poke-windows-x86_64.exe"
+$installDirectory = Join-Path $HOME ".local\bin"
+$installedPath = Join-Path $installDirectory "poke.exe"
+$releaseBaseUrl = "https://github.com/ai-mindset/poke/releases/latest/download"
+$temporaryDirectory = Join-Path ([IO.Path]::GetTempPath()) ("poke-install-" + [Guid]::NewGuid())
+$temporaryInstallPath = $null
 
-# Download and install
-Write-Host "Downloading from: $downloadUrl"
-Invoke-WebRequest -Uri $downloadUrl -OutFile "$INSTALL_DIR\poke.exe"
+New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
 
-Write-Host "✅ poke installed to $INSTALL_DIR\poke.exe"
-Write-Host ""
-Write-Host "Add to PATH if needed (run as Administrator):"
-Write-Host "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';$INSTALL_DIR', 'User')"
-Write-Host ""
-Write-Host "Create config file with your GitHub settings:"
-Write-Host "New-Item -ItemType Directory -Force -Path '$CONFIG_DIR' | Out-Null"
-Write-Host @"
-Set-Content -Path "$CONFIG_DIR\.env" -Value @"
-GITHUB_TOKEN=ghp_your_token
-GITHUB_USERNAME=your_username
-WORK_ORGS=Your-Organization
-WORK_TEAMS=team1,team2,team3
-"@
-"@
+try {
+    $binaryPath = Join-Path $temporaryDirectory $binaryName
+    $checksumsPath = Join-Path $temporaryDirectory "SHA256SUMS"
+
+    Write-Host "Installing Poke for windows-x86_64..."
+    Invoke-WebRequest -UseBasicParsing -Uri "$releaseBaseUrl/$binaryName" -OutFile $binaryPath
+    Invoke-WebRequest -UseBasicParsing -Uri "$releaseBaseUrl/SHA256SUMS" -OutFile $checksumsPath
+
+    $escapedBinaryName = [Regex]::Escape($binaryName)
+    $checksumPattern = "^([0-9a-fA-F]{64})\s+\*?$escapedBinaryName$"
+    $checksumLine = Get-Content $checksumsPath | Where-Object {
+        [Regex]::IsMatch($_, $checksumPattern)
+    } | Select-Object -First 1
+
+    if (-not $checksumLine) {
+        throw "SHA256SUMS has no valid entry for $binaryName"
+    }
+
+    $expectedHash = [Regex]::Match($checksumLine, $checksumPattern).Groups[1].Value
+    $actualHash = (Get-FileHash -Algorithm SHA256 -Path $binaryPath).Hash
+    if ($actualHash -ine $expectedHash) {
+        throw "Checksum verification failed for $binaryName"
+    }
+
+    & $binaryPath --help *> $null
+    if ($LASTEXITCODE -ne 0) {
+        throw "The downloaded executable failed its smoke test"
+    }
+
+    New-Item -ItemType Directory -Force -Path $installDirectory | Out-Null
+    $temporaryInstallPath = Join-Path $installDirectory (".poke-install-" + [Guid]::NewGuid() + ".exe")
+    Copy-Item -Path $binaryPath -Destination $temporaryInstallPath
+    if (Test-Path $installedPath) {
+        [IO.File]::Replace($temporaryInstallPath, $installedPath, $null)
+    }
+    else {
+        [IO.File]::Move($temporaryInstallPath, $installedPath)
+    }
+    $temporaryInstallPath = $null
+}
+finally {
+    if ($temporaryInstallPath -and (Test-Path $temporaryInstallPath)) {
+        Remove-Item -Force $temporaryInstallPath
+    }
+    if (Test-Path $temporaryDirectory) {
+        Remove-Item -Recurse -Force $temporaryDirectory
+    }
+}
+
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+$userPathEntries = @($userPath -split ";" | Where-Object { $_ })
+if ($userPathEntries -notcontains $installDirectory) {
+    $newUserPath = if ([String]::IsNullOrWhiteSpace($userPath)) {
+        $installDirectory
+    }
+    else {
+        "$userPath;$installDirectory"
+    }
+    [Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
+}
+
+$processPathEntries = @($env:Path -split ";" | Where-Object { $_ })
+if ($processPathEntries -notcontains $installDirectory) {
+    $env:Path = "$installDirectory;$env:Path"
+}
+
+Write-Host "Poke installed to $installedPath"
+Write-Host "Run 'poke --help' to get started."
