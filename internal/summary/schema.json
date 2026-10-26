@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "context": {"type": "array", "minItems": 1, "maxItems": 6, "items": {"$ref": "#/$defs/claim"}},
+    "key_points": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/claim"}},
+    "decisions": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/claim"}},
+    "open_questions": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/claim"}},
+    "next_actions": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/claim"}}
+  },
+  "required": ["context", "key_points", "decisions", "open_questions", "next_actions"],
+  "$defs": {
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {"type": "string", "minLength": 1, "maxLength": 600},
+        "evidence": {
+          "type": "array", "minItems": 1, "maxItems": 3,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "source_id": {"type": "string", "minLength": 1},
+              "quote": {"type": "string", "minLength": 1, "maxLength": 500}
+            },
+            "required": ["source_id", "quote"]
+          }
+        }
+      },
+      "required": ["text", "evidence"]
+    }
+  }
+}

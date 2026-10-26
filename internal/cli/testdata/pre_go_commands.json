@@ -1,0 +1,280 @@
+[
+  {
+    "args": [
+      "issues"
+    ],
+    "stdout": "octo/repo#1 Issue 1 日本語 [open | 1 next | note]\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "issues",
+      "--all"
+    ],
+    "stdout": "octo/repo#1 Issue 1 日本語 [open | 1 next | note]\nocto/repo#2 Issue 2 日本語 [closed]\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "issues",
+      "--all",
+      "--stale"
+    ],
+    "stdout": "octo/repo#1 Issue 1 日本語 [open | 1 next | note]\nocto/repo#2 Issue 2 日本語 [closed]\nocto/repo#3 Issue 3 日本語 [open | 1 next | note | stale]\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "issues",
+      "--stale"
+    ],
+    "stdout": "octo/repo#1 Issue 1 日本語 [open | 1 next | note]\nocto/repo#3 Issue 3 日本語 [open | 1 next | note | stale]\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "show",
+      "octo/repo#1"
+    ],
+    "stdout": "octo/repo#1 Issue 1 日本語\nopen | https://github.com/octo/repo/issues/1\n\nNote:\nPrivate 日本語\n\nTasks:\n[ ] 2: Second action\n[x] 1: First action\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "show",
+      "https://github.com/octo/repo/issues/3#issuecomment-1"
+    ],
+    "stdout": "octo/repo#3 Issue 3 日本語\nopen | stale | https://github.com/octo/repo/issues/3\n\nNote:\nRetained stale context\n\nTasks:\n[ ] 3: Stale action\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "next"
+    ],
+    "stdout": "2: Second action (octo/repo#1)\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "note",
+      "show",
+      "octo/repo#2"
+    ],
+    "stdout": "No note saved.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "note",
+      "set",
+      "OCTO/REPO#1",
+      " Unicode 日本語 "
+    ],
+    "stdout": "Saved note for octo/repo#1.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "note",
+      "show",
+      "octo/repo#1"
+    ],
+    "stdout": "Unicode 日本語\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "add",
+      "octo/repo#1",
+      "Third",
+      "action"
+    ],
+    "stdout": "Added task 4 to octo/repo#1.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "done",
+      "2"
+    ],
+    "stdout": "Completed task 2.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "reopen",
+      "1"
+    ],
+    "stdout": "Reopened task 1.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "rename",
+      "1",
+      " Renamed "
+    ],
+    "stdout": "Renamed task 1.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "move",
+      "4",
+      "1"
+    ],
+    "stdout": "Moved task 4 to position 1.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "move",
+      "1",
+      "99"
+    ],
+    "stdout": "Moved task 1 to position 3.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "next"
+    ],
+    "stdout": "4: Third action (octo/repo#1)\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "show",
+      "octo/repo#1"
+    ],
+    "stdout": "octo/repo#1 Issue 1 日本語\nopen | https://github.com/octo/repo/issues/1\n\nNote:\nUnicode 日本語\n\nTasks:\n[ ] 4: Third action\n[x] 2: Second action\n[ ] 1: Renamed\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "delete",
+      "1"
+    ],
+    "stdout": "Deleted task 1.\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "show",
+      "octo/repo#1"
+    ],
+    "stdout": "octo/repo#1 Issue 1 日本語\nopen | https://github.com/octo/repo/issues/1\n\nNote:\nUnicode 日本語\n\nTasks:\n[ ] 4: Third action\n[x] 2: Second action\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  {
+    "args": [
+      "task",
+      "done",
+      "0"
+    ],
+    "stdout": "",
+    "stderr": "Error: task ID must be a positive integer.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "task",
+      "done",
+      "999"
+    ],
+    "stdout": "",
+    "stderr": "Error: Task 999 was not found.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "task",
+      "wat"
+    ],
+    "stdout": "",
+    "stderr": "Error: Unknown task action \"wat\". Run poke help.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "note",
+      "wat",
+      "octo/repo#1"
+    ],
+    "stdout": "",
+    "stderr": "Error: Unknown note action \"wat\". Run poke help.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "task",
+      "add",
+      "octo/repo#1",
+      " "
+    ],
+    "stdout": "",
+    "stderr": "Error: Missing task title.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "show"
+    ],
+    "stdout": "",
+    "stderr": "Error: Missing command argument. Run poke help.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "show",
+      "#1"
+    ],
+    "stdout": "",
+    "stderr": "Error: Invalid issue reference \"#1\". Use owner/repo#123 or an issue URL.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "show",
+      "octo/repo#999"
+    ],
+    "stdout": "",
+    "stderr": "Error: octo/repo#999 is not in the local cache. Run poke sync first.\n",
+    "exit_code": 1
+  },
+  {
+    "args": [
+      "--unknown"
+    ],
+    "stdout": "",
+    "stderr": "Error: Unknown command \"--unknown\". Run poke help.\n",
+    "exit_code": 1
+  }
+]

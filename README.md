@@ -17,6 +17,9 @@ and focus state remain in a local SQLite database.
 - Offline access to previously synchronized work
 - Retention of annotations when an issue closes, is unassigned, or becomes
   inaccessible
+- Issue-body and comment transcripts with source links, JSON export, and
+  optional GitHub CLI authentication
+- Cited summaries using local Ollama or an explicitly selected Mistral API
 - No GitHub mutations: synchronization is read-only
 
 ## Quick start
@@ -38,8 +41,8 @@ irm https://raw.githubusercontent.com/ai-mindset/poke/main/install.ps1 | iex
 poke --help
 ```
 
-The installers download the executable from the latest GitHub release. Deno is
-not required. They verify the executable against the release's `SHA256SUMS`
+The installers download the executable from the latest GitHub release. Go and
+Deno are not required. They verify the executable against the release's `SHA256SUMS`
 before installing it. If you prefer not to pipe a script into a shell, download
 and inspect the installer first, or download the matching executable and
 `SHA256SUMS` directly from the
@@ -63,7 +66,8 @@ repositories, subject to that organization's approval and SSO policies. It
 cannot modify issues, notes, or repository content. A fine-grained token has one
 resource owner; use a classic PAT with the broader `repo` scope only if you must
 cross several resource owners that cannot be covered by fine-grained tokens.
-Poke does not need the `notifications` scope and does not use the GitHub CLI.
+Poke does not need the `notifications` scope. Synchronization uses the token
+directly; thread capture also supports GitHub CLI authentication.
 
 ### 3. Keep the token out of files and shell history
 
@@ -86,8 +90,8 @@ GITHUB_TOKEN="$(
 ```
 
 `secret-tool` is supplied by the `libsecret-tools` package on Debian and Ubuntu.
-Only synchronization needs the token; `issues`, `show`, `task`, `note`, and
-`next` use the local database.
+Synchronization needs the token; thread capture can use it or GitHub CLI
+authentication. `issues`, `show`, `task`, `note`, and `next` use the local database.
 
 For convenient synchronization from zsh, add this to `~/.zshrc`:
 
@@ -113,7 +117,7 @@ Run `source ~/.zshrc` once, then use `poke-sync` or
 one Poke process.
 
 On macOS or Windows, store the PAT in your system keychain or password manager
-and expose it only to the synchronization process. For a non-persistent,
+and expose it only to the Poke process that needs it. For a non-persistent,
 history-free macOS session:
 
 ```bash
@@ -137,12 +141,13 @@ $secureToken = $null
 ```
 
 Avoid saving the PAT in `.env`, shell-profile, or PowerShell-profile files.
-Legacy Poke plaintext token files are still read for compatibility, but emit a
-warning.
+The Go executable requires `GITHUB_TOKEN` for synchronization and no longer reads
+legacy plaintext token files.
 
 ### 4. Start working
 
-The first synchronization fetches open issues assigned to your GitHub account:
+Synchronization fetches open and closed issues assigned to your GitHub account;
+the default listing shows current open issues:
 
 ```bash
 # Linux with Secret Service
@@ -194,10 +199,112 @@ poke note show owner/repository#42
 
 Run `poke help` for the complete command summary.
 
+Capture an issue's body and all accessible issue comments, even when the issue
+is not assigned to you or present in the local cache:
+
+```bash
+poke thread owner/repository#42
+poke thread https://github.com/owner/repository/issues/42 --json > thread.json
+```
+
+When `GITHUB_TOKEN` is present, capture uses the read-only REST API client.
+Otherwise, it uses your existing GitHub CLI authentication (`gh auth login`).
+Use `--gh` to explicitly select GitHub CLI. No token is extracted from its
+credential store. GitHub CLI's own environment-token precedence still applies.
+Thread capture does not open the local database or include private notes/tasks.
+
+The transcript retains raw Markdown, authors, creation/edit timestamps, comment
+IDs, and source URLs. Direct API capture follows comment pagination links;
+GitHub CLI capture uses [`gh api --paginate --slurp`](https://cli.github.com/manual/gh_api).
+Each CLI subprocess has a two-minute timeout and can be interrupted.
+Readable transcripts escape terminal control characters; JSON preserves the
+original source text.
+
+`--json` emits the `issue_body_and_comments` scope, an issue object, comment
+array, retrieval time, `complete`, and
+`warnings`. Coverage is checked against GitHub's comment count, duplicate IDs,
+and issue metadata before/after retrieval. Changes or mismatches are explicitly
+marked incomplete. API calls are not an atomic snapshot; concurrent edits may
+escape these checks. Failed pages produce an error without a partial transcript.
+
+This increment covers github.com issue bodies and issue comments. Timeline
+events, linked discussions, pull request reviews, and attachment contents are
+outside its scope. Pull requests and other hosts are rejected explicitly.
+Summarize a complete issue thread with local Ollama, using `qwen3.8:27b`:
+
+```bash
+poke summarize owner/repository#42
+poke summarize owner/repository#42 --gh --json
+```
+
+Ollama must already serve that model. Poke uses `http://127.0.0.1:11434` by
+default; set `POKE_OLLAMA_URL` for a different loopback port. Only HTTP(S)
+loopback URLs are accepted. Poke does not download models or fall back to a
+hosted provider. To disable Ollama's own cloud features, configure its server
+with [`OLLAMA_NO_CLOUD=1`](https://docs.ollama.com/faq#how-do-i-disable-ollamas-cloud-features).
+
+Select Mistral explicitly to use `mistral-medium-latest`:
+
+```bash
+# Supply MISTRAL_API_KEY to this process from your secret manager.
+poke summarize owner/repository#42 --provider mistral
+```
+
+Selecting Mistral sends the requested issue body, comments, and attribution
+metadata to `https://api.mistral.ai/v1/chat/completions`, including private issue
+content when you select a private issue. `MISTRAL_API_KEY` is read from the
+environment; no credential files are read. The prompt contains captured thread
+data; Poke does not add GitHub credentials or local notes/tasks. Model HTTP requests have a five-minute timeout,
+do not follow redirects, and are not automatically retried.
+
+Use a saved capture for repeatable comparisons, or `--input -` for standard input:
+
+```bash
+poke thread owner/repository#42 --json > thread.json
+poke summarize --input thread.json
+poke summarize --input thread.json --provider mistral --json > summary.json
+```
+
+Summaries contain context, key points, explicit decisions, open questions, and
+next actions. Each claim requires a known source ID and an exact supporting
+excerpt from that source. Poke validates those excerpts and resolves their URLs
+and authors from the transcript. Readable output shows source references;
+`--json` also includes each excerpt, the provider, requested and returned model
+names, source retrieval time, summary time, and a SHA-256 digest of source
+content. This digest excludes retrieval time and does not authenticate an imported
+file against GitHub. Summaries are printed, not stored in the task database.
+
+Both providers receive the same schema and instructions to preserve disagreement,
+qualify proposals, and recognize superseded decisions. The adapters use
+[Ollama structured output](https://docs.ollama.com/capabilities/structured-outputs)
+and [Mistral JSON schema output](https://docs.mistral.ai/studio/conversations/structured-output/custom).
+Matching source excerpts verifies provenance; it cannot establish that a claim
+is logically supported, correctly classified, or complete. Review consequential
+decisions against their sources before relying on them.
+
+The first version uses one complete prompt, with no text truncation or chunking
+in Poke. It rejects incomplete captures, inconsistent source IDs/counts, input
+files over 1 MiB, and serialized prompt content over 256 KiB. Context-limit errors,
+incomplete output, invalid JSON, and invalid citations fail without accepting a
+summary. The prompt asks for 200-400 words; each of the five sections has at most
+six claims. Output generation is capped at 4096 tokens.
+
+Ollama requests use temperature zero, thinking disabled, and 32768 context tokens.
+Increase context explicitly when your model and available memory support it:
+
+```bash
+poke summarize owner/repository#42 --context-tokens 65536
+```
+
+Poke sends `truncate: false` and `shift: false` to Ollama; use a server that
+supports these controls. Poke cannot verify how an arbitrary local server handles
+them. There is no automatic move to Mistral when local inference fails. Long-thread
+chunking and automatic refresh are separate future increments.
+
 ## Troubleshooting
 
-- `No items found` means the query found no open issues assigned to the
-  authenticated user. Try `poke sync` without `--org`.
+- `No matching cached issues.` means the local listing found no matching issues.
+  Try `poke sync` without `--org`, or `poke issues --all --stale`.
 - Private repositories missing from results usually mean the organization has
   not approved the token, SSO authorization is incomplete, or the token's
   repository selection is too narrow.
@@ -223,47 +330,78 @@ Each cached issue is keyed by the authenticated GitHub account and GitHub's
 global node ID. A complete synchronization marks missing issues stale rather
 than deleting them, preserving all local notes and tasks. If GitHub reports a
 partial search result, Poke does not mark unseen issues stale.
+Organization-limited synchronization marks missing issues stale only within that
+organization. Existing Deno databases work directly with Go; no conversion is
+needed. Notes, task IDs, completion, order, and timestamps are retained.
+
+GitHub requests time out after 30 seconds per attempt. Rate-limited requests are
+retried at most once, respecting GitHub's wait headers. If the required wait
+exceeds 60 seconds, synchronization fails with a retry delay instead of retrying
+early. Failed or cancelled synchronization does not replace the cached work.
 
 ## Development
 
+Use Go 1.27.3 or newer:
+
 ```bash
-deno task dev -- help
-deno task test
-deno task check
+go run ./cmd/poke help
+go vet ./...
+go test ./...
+gofmt -l cmd internal
 ```
 
-Package a self-contained QuickJS executable for the current platform (requires
-Deno 2.9.5 or newer):
+Build a self-contained executable without a C compiler:
 
 ```bash
-deno task build:current
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/poke ./cmd/poke
 ./dist/poke --help
 ```
 
-QuickJS substantially reduces executable size and startup overhead, but the
-backend is experimental and Deno warns that it does not receive the same
-security updates as V8. Build the larger V8 variant when that tradeoff is not
-acceptable:
+Cross-compile by setting `GOOS` and `GOARCH`, for example:
 
 ```bash
-deno task build:current:v8
-./dist/poke-v8 --help
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o dist/poke-linux-aarch64 ./cmd/poke
 ```
 
-Cross-compile all five release targets with QuickJS:
+Supported combinations are Linux and macOS (`amd64`, `arm64`) and Windows
+(`amd64`). The only direct Go module dependency is the
+[CGO-free SQLite driver](https://pkg.go.dev/modernc.org/sqlite).
+
+Go tests are self-contained: CLI regression tests use output captured from the
+pre-Go implementation, and storage compatibility tests load its frozen synthetic
+SQLite schema/data snapshot. They check that opening an existing database preserves
+its schema and data, then independently query Go's writes for notes, task IDs,
+ordering, timestamps, account isolation, and retained stale work. CI requires only Go:
 
 ```bash
-deno task build
+go vet ./...
+go test ./...
 ```
 
-This produces Linux x86-64/ARM64, macOS x86-64/ARM64, and Windows x86-64
-executables in `dist/`. Deno supports cross-compiling these targets from any
-host.
+Set `POKE_TEST_BINARY` to an absolute executable path to include packaged-binary
+help, database, and exit-code smoke tests. Tests use synthetic data and temporary
+databases; no GitHub token is needed.
+
+Go rewrite baseline measurements on Linux amd64, before thread capture was
+added, against the checksum-verified v2.0.0 release:
+
+| Measurement                      |     v2.0.0 |         Go |
+| -------------------------------- | ---------: | ---------: |
+| Executable bytes                 | 61,801,504 | 11,227,296 |
+| Median `--help` wall time        |    81.0 ms |     2.1 ms |
+| Median cached `issues` wall time |    90.3 ms |     3.4 ms |
+
+Timing used 30 subprocess runs per command after three warmups, with randomized
+interleaving on the same machine and identical synthetic issue data. Go used
+the build flags above. These are local measurements, not cross-platform or
+cold-cache guarantees.
 
 ## Releases
 
 [`release.yml`](.github/workflows/release.yml) runs checks and builds each
-supported target independently with Deno 2.9.5. A manual workflow run makes the
+supported target independently with Go 1.27.3 and CGO disabled. Each target runs
+tests and executable smoke tests on a matching runner. CI does not install Deno
+or invoke the retained TypeScript implementation. A manual workflow run makes the
 executables available as workflow artifacts. Supplying an existing `v*` tag in
 the manual run publishes that tag, which provides a recovery path if its push
 event was missed. Pushing a `v*` tag also creates a GitHub release containing all
@@ -272,16 +410,42 @@ created only after every build succeeds.
 
 The source is split into:
 
-- `src/github.ts`: read-only GitHub API client and pagination
-- `src/store.ts`: SQLite schema, migrations, and local operations
-- `src/cli.ts`: command parsing and presentation
-- `src/models.ts`: shared domain types and issue-reference parsing
+- `cmd/poke`: executable entrypoint and interruption handling
+- `internal/github`: read-only GitHub API client and pagination
+- `internal/store`: existing SQLite schema and local operations
+- `internal/cli`: command parsing and presentation
+- `internal/model`: domain types and issue-reference parsing
+- `internal/summary`: model adapters, summary schema, prompts, and evidence validation
+
+The retained `src/` implementation and Deno tasks are available for manual
+reference. Go builds, tests, and releases do not depend on them.
 
 ## Current boundary
 
 Poke deliberately does not yet publish tasks or notes to GitHub, synchronize
 between devices, provide shared boards, or implement sprints and estimation.
 Those features can be added later without changing the local data boundary.
+
+The `summarize` command supports local `qwen3.8:27b` and hosted
+`mistral-medium-latest`. Evaluate semantic accuracy on representative captured
+threads before adding automatic refresh or cross-issue synthesis. The automated
+tests use synthetic transcripts and model responses; they do not measure the
+selected models' factual accuracy. Browser extensions and shared services remain
+deferred.
+
+The synthetic fixture below provides a repeatable first manual model comparison:
+
+```bash
+poke summarize --input internal/summary/testdata/decision_reversal.json
+poke summarize --input internal/summary/testdata/decision_reversal.json --provider mistral
+```
+
+Check that both retain the full-cache proposal and objection, identify per-tenant
+invalidation as the latest stated decision, mark the per-key decision as
+superseded, leave TTL unresolved, and attribute the regression-test offer to
+Alice. The fixture is synthetic; its GitHub URLs are source identifiers, not
+links to a real discussion. Repeat evaluation on representative real threads
+before relying on model output.
 
 ## License
 
